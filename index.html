@@ -2,33 +2,36 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>학술대회 이름표 인쇄 (구글 방식)</title>
+    <title>학술대회 이름표 시스템</title>
+    <!-- 모든 라이브러리를 하나로 통합 -->
+    <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
         .controls { margin-bottom: 20px; background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 10px 5px; font-size: 16px; background: #e83e8c; }
+        button { padding: 15px 30px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin-top: 10px; font-size: 18px; background: #c2185b; }
         
-        /* 이름표 디자인 */
-        #badge-template { width: 400px; height: 550px; background: white; margin: 20px auto; border: 1px solid #eee; position: relative; }
+        #badge-template { width: 400px; height: 550px; background: white; margin: 20px auto; border: 1px solid #ddd; position: relative; }
         .header-banner { width: 100%; height: 110px; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
         .info-section { margin-top: 60px; }
-        .info-section h1 { font-size: 45px; margin: 15px 0; color: #000; }
-        .info-section p { font-size: 22px; color: #444; margin: 5px 0; }
-        #qr-image { margin-top: 40px; width: 160px; height: 160px; display: block; margin-left: auto; margin-right: auto; }
+        .info-section h1 { font-size: 45px; margin: 15px 0; color: #000; font-weight: bold; }
+        .info-section p { font-size: 24px; color: #444; margin: 5px 0; }
+        
+        /* QR 코드 영역 고정 */
+        #qrcode-box { margin-top: 40px; display: flex; justify-content: center; min-height: 160px; }
     </style>
 </head>
 <body onload="updateBadge()">
 
-    <h2>학술대회 이름표 인쇄 (Google API 방식)</h2>
+    <h2>학술대회 이름표 생성 시스템</h2>
     
     <div class="controls">
         <input type="text" id="userName" placeholder="성함" oninput="updateBadge()"> <br>
         <input type="text" id="userUniv" placeholder="대학교" oninput="updateBadge()"> <br>
         <input type="text" id="userDept" placeholder="학과" oninput="updateBadge()"> <br>
-        <button onclick="printBadge()">바로 인쇄하기 (PDF)</button>
+        <button onclick="downloadBadgePDF()">이름표 PDF 다운로드</button>
     </div>
 
     <div id="badge-template">
@@ -38,55 +41,58 @@
             <p id="displayDept">소속 학과</p>
             <h1 id="displayName">성함</h1>
         </div>
-        <!-- 구글 시트에서 쓰는 것과 동일한 API 주소를 사용합니다 -->
-        <img id="qr-image" src="" alt="QR Code">
+        <!-- 여기에 QR 코드가 직접 그려집니다 -->
+        <div id="qrcode-box"></div>
     </div>
 
     <script>
+        // QR 객체를 미리 생성하지 않고 필요할 때마다 그립니다.
         function updateBadge() {
             const name = document.getElementById('userName').value || "성함";
             const univ = document.getElementById('userUniv').value || "소속 대학교";
-            
-            // 구글 시트 QR 생성 방식 (구글 차트 API)
-            const qrData = encodeURIComponent(`Name:${name}, Univ:${univ}`);
-            const qrImg = document.getElementById('qr-image');
-            
-            // 이미지 주소를 교체합니다.
-            qrImg.src = `https://googleapis.com{qrData}&choe=UTF-8`;
-            
+            const dept = document.getElementById('userDept').value || "소속 학과";
+
             document.getElementById('displayName').innerText = name;
             document.getElementById('displayUniv').innerText = univ;
-            document.getElementById('displayDept').innerText = document.getElementById('userDept').value || "소속 학과";
+            document.getElementById('displayDept').innerText = dept;
+
+            const qrBox = document.getElementById("qrcode-box");
+            qrBox.innerHTML = ""; // 기존 QR 초기화
+
+            // 외부 API 없이 브라우저 내에서 직접 생성 (가장 확실함)
+            new QRCode(qrBox, {
+                text: `Name: ${name}, Univ: ${univ}`,
+                width: 160,
+                height: 160,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
         }
 
-        async function printBadge() {
-            const qrImg = document.getElementById('qr-image');
-            
-            // 핵심: 이미지가 완전히 로드되었는지 확인하는 과정 추가
-            if (!qrImg.complete) {
-                alert("QR 코드를 불러오는 중입니다. 잠시만 기다려주세요!");
-                return;
-            }
-
+        async function downloadBadgePDF() {
             const badge = document.getElementById('badge-template');
+            const name = document.getElementById('userName').value || "이름표";
+
             try {
                 const canvas = await html2canvas(badge, {
-                    scale: 3,
-                    useCORS: true, // 구글 서버 이미지를 허용하기 위해 필수!
-                    allowTaint: false,
+                    scale: 3, // 고해상도 인쇄용
+                    useCORS: true,
                     logging: false
                 });
                 
                 const imgData = canvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // A4 중앙에 배치
                 pdf.addImage(imgData, 'PNG', 55, 30, 100, 137.5);
                 
-                pdf.autoPrint();
-                window.open(pdf.output('bloburl'), '_blank');
+                // 팝업 문제 해결: 즉시 다운로드로 변경
+                pdf.save(`${name}_badge.pdf`);
+                
             } catch (error) {
-                console.error(error);
-                alert("인쇄 준비 중 오류가 발생했습니다. 브라우저의 팝업 차단을 확인해 보세요.");
+                alert("PDF 생성 중 오류가 발생했습니다. 브라우저를 새로고침 해주세요.");
             }
         }
     </script>
