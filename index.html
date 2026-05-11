@@ -2,55 +2,59 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>학술대회 이름표 생성기 (API 버전)</title>
+    <title>학술대회 이름표 인쇄 시스템</title>
+    <!-- 필수 라이브러리 -->
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; }
-        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 10px 5px; }
-        
-        /* 이름표 디자인 */
+        .controls { margin-bottom: 20px; background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 5px; font-size: 16px; transition: 0.3s; }
+        .btn-preview { background: #6c757d; }
+        .btn-print { background: #e83e8c; } /* 강조 색상 */
+        button:hover { opacity: 0.8; }
+
+        /* 이름표 디자인 (실제 인쇄될 영역) */
         #badge-template { 
             width: 400px; height: 550px; background: white; margin: 20px auto;
-            border: 1px solid #ccc; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 1px solid #eee; position: relative; overflow: hidden;
         }
         .header-banner { 
-            width: 100%; height: 100px; background: #007bff; 
-            color: white; display: flex; align-items: center; justify-content: center; font-size: 20px;
+            width: 100%; height: 110px; background: #007bff; 
+            color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold;
         }
-        .info-section { margin-top: 50px; }
-        .info-section h1 { font-size: 40px; margin: 20px 0; color: #333; }
-        .info-section p { font-size: 20px; color: #666; margin: 5px 0; }
-        
-        /* QR 이미지 영역 */
-        #qr-image { margin-top: 40px; width: 150px; height: 150px; display: none; margin-left: auto; margin-right: auto; }
+        .info-section { margin-top: 60px; }
+        .info-section h1 { font-size: 45px; margin: 15px 0; color: #000; }
+        .info-section p { font-size: 22px; color: #444; margin: 5px 0; }
+        #qr-image { margin-top: 40px; width: 160px; height: 160px; display: none; margin-left: auto; margin-right: auto; }
     </style>
 </head>
 <body>
 
-    <h2>학술대회 이름표 생성 (API 방식)</h2>
+    <h2>학술대회 이름표 즉시 인쇄</h2>
     
-    <div>
-        <input type="text" id="userName" placeholder="이름 (홍길동)"> <br>
-        <input type="text" id="userUniv" placeholder="대학교 (한국대학교)"> <br>
-        <input type="text" id="userDept" placeholder="학과 (컴퓨터공학과)"> <br>
-        <button onclick="generateBadge()" style="background: #007bff;">1. 이름표 미리보기</button>
-        <button onclick="downloadPDF()" style="background: #28a745;">2. PDF 다운로드</button>
+    <div class="controls">
+        <input type="text" id="userName" placeholder="이름을 입력하세요"> <br>
+        <input type="text" id="userUniv" placeholder="대학교"> <br>
+        <input type="text" id="userDept" placeholder="학과"> <br>
+        <button class="btn-preview" onclick="generateBadge()">1. 미리보기 (데이터 확인)</button>
+        <button class="btn-print" onclick="printBadge()">2. 바로 인쇄하기 (PDF 생성)</button>
     </div>
 
+    <!-- 이름표 디자인 영역 -->
     <div id="badge-template">
-        <div class="header-banner">Academic Conference 2024</div>
+        <div class="header-banner">ACADEMIC CONFERENCE 2024</div>
         <div class="info-section">
-            <p id="displayUniv">소속 대학</p>
-            <p id="displayDept">소속 학과</p>
-            <h1 id="displayName">성함</h1>
+            <p id="displayUniv">한국대학교</p>
+            <p id="displayDept">컴퓨터공학과</p>
+            <h1 id="displayName">홍길동</h1>
         </div>
-        <!-- API로 생성된 QR 코드가 표시될 곳 -->
         <img id="qr-image" src="" alt="QR Code">
     </div>
 
     <script>
+        // 1. 데이터 반영 및 QR 코드 미리 생성
         function generateBadge() {
             const name = document.getElementById('userName').value || "성함";
             const univ = document.getElementById('userUniv').value || "소속 대학";
@@ -60,31 +64,50 @@
             document.getElementById('displayUniv').innerText = univ;
             document.getElementById('displayDept').innerText = dept;
 
-            // QR API 호출 (goqr.me 사용)
-            const qrData = encodeURIComponent(`Name:${name}, Univ:${univ}`);
+            // API를 이용한 QR 생성
+            const qrData = encodeURIComponent(`NAME:${name}\nUNIV:${univ}`);
             const qrImg = document.getElementById('qr-image');
             qrImg.src = `https://qrserver.com{qrData}`;
             qrImg.style.display = "block";
         }
 
-        async function downloadPDF() {
+        // 2. PDF 생성 후 즉시 인쇄 실행
+        async function printBadge() {
+            const name = document.getElementById('userName').value;
+            if(!name) {
+                alert("이름을 입력하고 '미리보기'를 먼저 눌러주세요!");
+                return;
+            }
+
             const badge = document.getElementById('badge-template');
             
-            // 이미지 로딩을 기다리기 위해 잠시 대기
-            setTimeout(async () => {
+            try {
+                // 이름표 영역을 이미지로 캡처
                 const canvas = await html2canvas(badge, {
-                    scale: 3,
-                    useCORS: true, // API 이미지 허용을 위해 필수
+                    scale: 3, // 인쇄용 고해상도 설정
+                    useCORS: true,
                     logging: false
                 });
                 
                 const imgData = canvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
+                
+                // A4 용지 설정 (p: 세로, mm: 단위, a4: 크기)
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 
+                // 이미지를 PDF 중앙에 배치 (여백 포함)
                 pdf.addImage(imgData, 'PNG', 55, 30, 100, 137.5);
-                pdf.save(`${document.getElementById('userName').value}_이름표.pdf`);
-            }, 500); // 0.5초 대기 후 실행
+                
+                // 핵심 기능: 인쇄창 띄우기
+                // 브라우저에 따라 새 창에서 인쇄 대화상자를 엽니다.
+                pdf.autoPrint();
+                const hsn = pdf.output('bloburl');
+                window.open(hsn, '_blank');
+
+            } catch (error) {
+                console.error("인쇄 실행 중 오류:", error);
+                alert("인쇄 준비 중 오류가 발생했습니다.");
+            }
         }
     </script>
 </body>
