@@ -2,100 +2,113 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>학술대회 이름표 인쇄 시스템</title>
+    <title>이름표 시스템 자가 진단 버전</title>
     
-    <!-- 내 리포지토리에 올린 라이브러리를 불러옵니다 -->
+    <!-- 1. 라이브러리 로드 (경로 재확인용) -->
     <script src="qrcode.min.js"></script>
 
     <style>
-        /* 1. 화면 표시용 스타일 (편집 모드) */
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        .no-print { background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .no-print h2 { margin-top: 0; color: #333; }
+        .no-print { background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; display: block; margin-left: auto; margin-right: auto; }
-        button { padding: 15px 30px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 18px; background: #c2185b; margin-top: 15px; transition: 0.3s; }
-        button:hover { background: #ad1457; }
-
-        /* 2. 이름표 디자인 (실제 인쇄될 영역) */
-        #badge-area { 
-            width: 10cm; height: 14cm; background: white; margin: 0 auto; 
-            border: 1px solid #ddd; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column;
-        }
-        .header { width: 100%; height: 2.5cm; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
-        .content { flex-grow: 1; padding-top: 1.5cm; }
-        .content p { font-size: 20px; margin: 5px 0; color: #555; }
-        .content h1 { font-size: 48px; margin: 15px 0; color: #000; font-weight: 800; }
+        button { padding: 15px 30px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; background: #c2185b; margin-top: 10px; }
         
-        /* QR 코드 중앙 정렬 */
+        /* 이름표 디자인 */
+        #badge-area { width: 10cm; height: 14cm; background: white; margin: 0 auto; border: 1px solid #ddd; }
+        .header { width: 100%; height: 2.5cm; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
+        .content { padding-top: 1.5cm; }
         #qrcode { display: flex; justify-content: center; margin-top: 1cm; height: 160px; }
 
-        /* 3. 인쇄 시 설정 (브라우저 인쇄창에서 적용됨) */
-        @media print {
-            .no-print { display: none; } /* 입력창과 버튼은 안 나옴 */
-            body { background: white; padding: 0; }
-            #badge-area { border: none; margin: 0; box-shadow: none; } /* 이름표만 깔끔하게 */
+        /* [중요] 자가 진단용 스타일 (인쇄 시 숨김) */
+        #debug-panel { 
+            margin-top: 30px; padding: 15px; background: #333; color: #0f0; 
+            text-align: left; font-family: monospace; font-size: 12px;
+            display: inline-block; width: 400px; border-radius: 8px;
         }
+
+        @media print { .no-print, #debug-panel { display: none !important; } }
     </style>
 </head>
 <body>
 
-    <!-- 입력 및 컨트롤 영역 -->
     <div class="no-print">
-        <h2>학술대회 이름표 생성</h2>
-        <input type="text" id="inName" placeholder="성함 (예: 홍길동)" oninput="updateBadge()">
-        <input type="text" id="inUniv" placeholder="대학교 (예: 한국대학교)" oninput="updateBadge()">
-        <input type="text" id="inDept" placeholder="학과 (예: 컴퓨터공학과)" oninput="updateBadge()">
+        <h2>학술대회 이름표 생성 (진단 모드)</h2>
+        <!-- 기본값(value)을 미리 넣어두었습니다 -->
+        <input type="text" id="inName" value="홍길동" oninput="updateBadge()">
+        <input type="text" id="inUniv" value="한국대학교" oninput="updateBadge()">
+        <input type="text" id="inDept" value="컴퓨터공학과" oninput="updateBadge()">
         <button onclick="window.print()">이름표 바로 인쇄하기</button>
-        <p style="font-size: 13px; color: #888; margin-top: 10px;">* 인쇄창에서 '배경 그래픽'을 체크하면 파란색 바가 나옵니다.</p>
     </div>
 
-    <!-- 인쇄될 이름표 영역 -->
     <div id="badge-area">
         <div class="header">ACADEMIC CONFERENCE 2024</div>
         <div class="content">
-            <p id="dispUniv">소속 대학교</p>
-            <p id="dispDept">소속 학과</p>
-            <h1 id="dispName">성함</h1>
-            <div id="qrcode"></div> <!-- 여기에 QR이 그려짐 -->
+            <p id="dispUniv"></p>
+            <p id="dispDept"></p>
+            <h1 id="dispName"></h1>
+            <div id="qrcode"></div>
         </div>
     </div>
 
+    <!-- 진단용 패널 -->
+    <div id="debug-panel">
+        <strong>[시스템 상태 체크]</strong><br>
+        1. qrcode.min.js 로드 상태: <span id="lib-status">체크 중...</span><br>
+        2. QRCode 객체 존재 여부: <span id="obj-status">체크 중...</span><br>
+        3. 마지막 에러 메시지: <span id="error-status">없음</span>
+    </div>
+
     <script>
-        // 화면 업데이트 및 QR 생성 함수
         function updateBadge() {
-            // 입력값 가져오기
-            const name = document.getElementById('inName').value || "성함";
-            const univ = document.getElementById('inUniv').value || "소속 대학교";
-            const dept = document.getElementById('inDept').value || "소속 학과";
+            const debugLib = document.getElementById('lib-status');
+            const debugObj = document.getElementById('obj-status');
+            const debugErr = document.getElementById('error-status');
 
-            // 텍스트 반영
-            document.getElementById('dispName').innerText = name;
-            document.getElementById('dispUniv').innerText = univ;
-            document.getElementById('dispDept').innerText = dept;
+            try {
+                // 1. 데이터 가져오기
+                const name = document.getElementById('inName').value;
+                const univ = document.getElementById('inUniv').value;
+                const dept = document.getElementById('inDept').value;
 
-            // QR 코드 영역 초기화
-            const qrDiv = document.getElementById("qrcode");
-            qrDiv.innerHTML = ""; 
+                // 2. 화면 반영
+                document.getElementById('dispName').innerText = name;
+                document.getElementById('dispUniv').innerText = univ;
+                document.getElementById('dispDept').innerText = dept;
 
-            // qrcode.min.js 라이브러리가 로드되었는지 확인 후 실행
-            if (window.QRCode) {
-                new QRCode(qrDiv, {
+                // 3. 라이브러리 체크
+                if (typeof QRCode === "undefined") {
+                    debugLib.innerText = "❌ 로드 실패 (파일 경로를 확인하세요)";
+                    debugLib.style.color = "red";
+                    return;
+                } else {
+                    debugLib.innerText = "✅ 로드 성공";
+                    debugLib.style.color = "#0f0";
+                }
+
+                // 4. QR 생성
+                const qrDiv = document.getElementById("qrcode");
+                qrDiv.innerHTML = ""; 
+
+                const qr = new QRCode(qrDiv, {
                     text: `NAME:${name}, UNIV:${univ}`,
                     width: 160,
-                    height: 160,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
+                    height: 160
                 });
-            } else {
-                qrDiv.innerHTML = "<p style='font-size:12px;color:red;'>라이브러리 로드 실패</p>";
+
+                debugObj.innerText = "✅ 정상 작동 중";
+                debugObj.style.color = "#0f0";
+
+            } catch (e) {
+                debugErr.innerText = e.message;
+                debugErr.style.color = "red";
             }
         }
 
-        // 페이지가 열리자마자 초기 샘플 상태를 보여줍니다.
-        window.onload = updateBadge;
+        // 페이지 로드 시 즉시 실행
+        window.onload = function() {
+            console.log("페이지 로드 완료");
+            updateBadge();
+        };
     </script>
-
 </body>
 </html>
