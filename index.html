@@ -3,54 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <title>학술대회 이름표 생성기</title>
-    <!-- 라이브러리 로드: QR 생성 및 PDF 변환 -->
+    <script src="https://cloudflare.com"></script>
+    <!-- 최신 라이브러리로 교체 -->
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
-    <script src="https://hertzen.com"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        .input-group { margin-bottom: 20px; }
+        input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 5px; }
+        
+        /* 이름표 디자인 */
         #badge-template { 
             width: 400px; height: 550px; background: white; margin: 20px auto;
-            border: 1px solid #ccc; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 1px solid #ccc; position: relative; display: block;
         }
-        .header-img { width: 100%; height: 120px; object-fit: cover; }
-        .info-section { margin-top: 30px; }
-        .info-section h1 { font-size: 28px; margin: 10px 0; }
-        .info-section p { font-size: 18px; color: #555; margin: 5px 0; }
-        #qrcode { margin-top: 40px; display: flex; justify-content: center; }
-        .btn-area { margin-top: 20px; }
-        input { padding: 10px; margin: 5px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        .header-banner { 
+            width: 100%; height: 100px; background: #007bff; 
+            color: white; display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .info-section { margin-top: 50px; }
+        .info-section h1 { font-size: 40px; margin: 20px 0; color: #333; }
+        .info-section p { font-size: 20px; color: #666; margin: 5px 0; }
+        #qrcode { margin-top: 50px; display: flex; justify-content: center; }
     </style>
 </head>
 <body>
 
     <h2>학술대회 이름표 자동 생성</h2>
     
-    <div>
-        <input type="text" id="userName" placeholder="이름을 입력하세요"> <br>
-        <input type="text" id="userUniv" placeholder="대학교 (예: 한국대학교)"> <br>
-        <input type="text" id="userDept" placeholder="학과 (예: 컴퓨터공학과)"> <br>
-        <button onclick="generateBadge()">이름표 미리보기</button>
-        <button onclick="downloadPDF()" style="background: #28a745;">PDF 다운로드</button>
+    <div class="input-group">
+        <input type="text" id="userName" placeholder="이름 (홍길동)"> <br>
+        <input type="text" id="userUniv" placeholder="대학교 (한국대학교)"> <br>
+        <input type="text" id="userDept" placeholder="학과 (컴퓨터공학과)"> <br>
+        <button onclick="generateBadge()" style="background: #007bff;">1. 이름표 미리보기</button>
+        <button onclick="downloadPDF()" style="background: #28a745;">2. PDF 다운로드</button>
     </div>
 
     <!-- 이름표 디자인 영역 -->
     <div id="badge-template">
-        <!-- 학회 로고나 배너 이미지 (현재는 샘플 이미지) -->
-        <img src="https://placeholder.com" class="header-img" id="banner">
+        <div class="header-banner">Academic Conference 2024</div>
         <div class="info-section">
-            <p id="displayUniv">소속 대학</p>
-            <p id="displayDept">소속 학과</p>
+            <p id="displayUniv">대학교</p>
+            <p id="displayDept">학과</p>
             <h1 id="displayName">성함</h1>
         </div>
         <div id="qrcode"></div>
     </div>
 
     <script>
-        const { jsPDF } = window.jspdf;
-
-        // 1. 입력값 반영 및 QR 코드 생성 기능
         function generateBadge() {
             const name = document.getElementById('userName').value || "성함";
             const univ = document.getElementById('userUniv').value || "소속 대학";
@@ -60,28 +61,37 @@
             document.getElementById('displayUniv').innerText = univ;
             document.getElementById('displayDept').innerText = dept;
 
-            // QR 코드 초기화 후 재생성
             const qrcodeDiv = document.getElementById("qrcode");
             qrcodeDiv.innerHTML = "";
             new QRCode(qrcodeDiv, {
-                text: `Name: ${name}, Univ: ${univ}`,
-                width: 150,
-                height: 150
+                text: `ID:${name}-${univ}`,
+                width: 140,
+                height: 140
             });
         }
 
-        // 2. PDF 다운로드 기능
-        function downloadPDF() {
+        async function downloadPDF() {
             const badge = document.getElementById('badge-template');
             
-            html2canvas(badge, { useCORS: true, scale: 2 }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4'); // A4 사이즈
+            try {
+                const canvas = await html2canvas(badge, {
+                    scale: 2,
+                    useCORS: true, // 외부 이미지 허용
+                    allowTaint: true,
+                    logging: false
+                });
                 
-                // 이름표 사이즈에 맞춰 PDF에 배치 (중앙 정렬)
-                pdf.addImage(imgData, 'PNG', 55, 20, 100, 137.5); 
-                pdf.save(`${document.getElementById('userName').value}_이름표.pdf`);
-            });
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // PDF 내 위치 조정 (가운데 배치)
+                pdf.addImage(imgData, 'PNG', 55, 30, 100, 137.5);
+                pdf.save('conference_badge.pdf');
+            } catch (error) {
+                alert("PDF 생성 중 오류가 발생했습니다. '미리보기' 버튼을 먼저 눌러주세요!");
+                console.error(error);
+            }
         }
     </script>
 </body>
