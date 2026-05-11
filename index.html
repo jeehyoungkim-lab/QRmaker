@@ -2,21 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>학술대회 이름표 생성기</title>
-    <script src="https://cloudflare.com"></script>
-    <!-- 최신 라이브러리로 교체 -->
+    <title>학술대회 이름표 생성기 (API 버전)</title>
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        .input-group { margin-bottom: 20px; }
         input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; }
-        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 5px; }
+        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 10px 5px; }
         
         /* 이름표 디자인 */
         #badge-template { 
             width: 400px; height: 550px; background: white; margin: 20px auto;
-            border: 1px solid #ccc; position: relative; display: block;
+            border: 1px solid #ccc; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .header-banner { 
             width: 100%; height: 100px; background: #007bff; 
@@ -25,14 +22,16 @@
         .info-section { margin-top: 50px; }
         .info-section h1 { font-size: 40px; margin: 20px 0; color: #333; }
         .info-section p { font-size: 20px; color: #666; margin: 5px 0; }
-        #qrcode { margin-top: 50px; display: flex; justify-content: center; }
+        
+        /* QR 이미지 영역 */
+        #qr-image { margin-top: 40px; width: 150px; height: 150px; display: none; margin-left: auto; margin-right: auto; }
     </style>
 </head>
 <body>
 
-    <h2>학술대회 이름표 자동 생성</h2>
+    <h2>학술대회 이름표 생성 (API 방식)</h2>
     
-    <div class="input-group">
+    <div>
         <input type="text" id="userName" placeholder="이름 (홍길동)"> <br>
         <input type="text" id="userUniv" placeholder="대학교 (한국대학교)"> <br>
         <input type="text" id="userDept" placeholder="학과 (컴퓨터공학과)"> <br>
@@ -40,15 +39,15 @@
         <button onclick="downloadPDF()" style="background: #28a745;">2. PDF 다운로드</button>
     </div>
 
-    <!-- 이름표 디자인 영역 -->
     <div id="badge-template">
         <div class="header-banner">Academic Conference 2024</div>
         <div class="info-section">
-            <p id="displayUniv">대학교</p>
-            <p id="displayDept">학과</p>
+            <p id="displayUniv">소속 대학</p>
+            <p id="displayDept">소속 학과</p>
             <h1 id="displayName">성함</h1>
         </div>
-        <div id="qrcode"></div>
+        <!-- API로 생성된 QR 코드가 표시될 곳 -->
+        <img id="qr-image" src="" alt="QR Code">
     </div>
 
     <script>
@@ -61,23 +60,21 @@
             document.getElementById('displayUniv').innerText = univ;
             document.getElementById('displayDept').innerText = dept;
 
-            const qrcodeDiv = document.getElementById("qrcode");
-            qrcodeDiv.innerHTML = "";
-            new QRCode(qrcodeDiv, {
-                text: `ID:${name}-${univ}`,
-                width: 140,
-                height: 140
-            });
+            // QR API 호출 (goqr.me 사용)
+            const qrData = encodeURIComponent(`Name:${name}, Univ:${univ}`);
+            const qrImg = document.getElementById('qr-image');
+            qrImg.src = `https://qrserver.com{qrData}`;
+            qrImg.style.display = "block";
         }
 
         async function downloadPDF() {
             const badge = document.getElementById('badge-template');
             
-            try {
+            // 이미지 로딩을 기다리기 위해 잠시 대기
+            setTimeout(async () => {
                 const canvas = await html2canvas(badge, {
-                    scale: 2,
-                    useCORS: true, // 외부 이미지 허용
-                    allowTaint: true,
+                    scale: 3,
+                    useCORS: true, // API 이미지 허용을 위해 필수
                     logging: false
                 });
                 
@@ -85,13 +82,9 @@
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 
-                // PDF 내 위치 조정 (가운데 배치)
                 pdf.addImage(imgData, 'PNG', 55, 30, 100, 137.5);
-                pdf.save('conference_badge.pdf');
-            } catch (error) {
-                alert("PDF 생성 중 오류가 발생했습니다. '미리보기' 버튼을 먼저 눌러주세요!");
-                console.error(error);
-            }
+                pdf.save(`${document.getElementById('userName').value}_이름표.pdf`);
+            }, 500); // 0.5초 대기 후 실행
         }
     </script>
 </body>
