@@ -9,28 +9,28 @@
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
         .controls { margin-bottom: 20px; background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 5px; font-size: 16px; }
-        .btn-preview { background: #6c757d; }
-        .btn-print { background: #e83e8c; }
-        #badge-template { width: 400px; height: 550px; background: white; margin: 20px auto; border: 1px solid #eee; position: relative; }
+        button { padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; margin: 10px 5px; font-size: 16px; }
+        .btn-print { background: #e83e8c; box-shadow: 0 4px #b82e6a; }
+        .btn-print:active { transform: translateY(2px); box-shadow: 0 2px #b82e6a; }
+        
+        #badge-template { width: 400px; height: 550px; background: white; margin: 20px auto; border: 1px solid #eee; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .header-banner { width: 100%; height: 110px; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
         .info-section { margin-top: 60px; }
-        .info-section h1 { font-size: 45px; margin: 15px 0; color: #000; }
+        .info-section h1 { font-size: 45px; margin: 15px 0; color: #000; font-weight: 800; }
         .info-section p { font-size: 22px; color: #444; margin: 5px 0; }
-        /* QR 영역 설정 */
-        #qr-image { margin-top: 40px; width: 160px; height: 160px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #f0f0f0; }
+        #qr-image { margin-top: 40px; width: 160px; height: 160px; display: block; margin-left: auto; margin-right: auto; }
     </style>
 </head>
-<body>
+<body onload="updateBadge()"> <!-- 페이지 로딩 시 초기값 생성 -->
 
-    <h2>학술대회 이름표 인쇄 (QR 수정 버전)</h2>
+    <h2>학술대회 이름표 즉시 인쇄</h2>
     
     <div class="controls">
-        <input type="text" id="userName" placeholder="성함"> <br>
-        <input type="text" id="userUniv" placeholder="대학교"> <br>
-        <input type="text" id="userDept" placeholder="학과"> <br>
-        <button class="btn-preview" onclick="generateBadge()">1. 미리보기</button>
-        <button class="btn-print" onclick="printBadge()">2. 바로 인쇄하기</button>
+        <!-- oninput을 사용해 타이핑 즉시 화면이 바뀌게 설정 -->
+        <input type="text" id="userName" placeholder="이름을 입력하세요" oninput="updateBadge()"> <br>
+        <input type="text" id="userUniv" placeholder="대학교" oninput="updateBadge()"> <br>
+        <input type="text" id="userDept" placeholder="학과" oninput="updateBadge()"> <br>
+        <button class="btn-print" onclick="printBadge()">바로 인쇄하기 (PDF 생성)</button>
     </div>
 
     <div id="badge-template">
@@ -40,44 +40,32 @@
             <p id="displayDept">소속 학과</p>
             <h1 id="displayName">성함</h1>
         </div>
-        <!-- 초기에는 빈 투명 이미지를 넣어 엑박 방지 -->
-        <img id="qr-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+        <img id="qr-image" src="" alt="QR Code">
     </div>
 
     <script>
-        function generateBadge() {
+        // 실시간으로 이름표와 QR을 업데이트하는 함수
+        function updateBadge() {
             const name = document.getElementById('userName').value || "성함";
-            const univ = document.getElementById('userUniv').value || "소속 대학";
+            const univ = document.getElementById('userUniv').value || "소속 대학교";
             const dept = document.getElementById('userDept').value || "소속 학과";
 
             document.getElementById('displayName').innerText = name;
             document.getElementById('displayUniv').innerText = univ;
             document.getElementById('displayDept').innerText = dept;
 
-            // 구글 차트 API로 교체
-            const qrData = encodeURIComponent(`NAME:${name}, UNIV:${univ}`);
+            // 구글 QR API (값이 없어도 기본 텍스트로 QR 생성)
+            const qrContent = name === "성함" ? "Welcome to Conference" : `NAME:${name}, UNIV:${univ}`;
             const qrImg = document.getElementById('qr-image');
-            qrImg.src = `https://googleapis.com{qrData}&choe=UTF-8`;
-            
-            qrImg.onerror = function() {
-                alert("QR 코드를 불러오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.");
-            };
+            qrImg.src = `https://googleapis.com{encodeURIComponent(qrContent)}&choe=UTF-8`;
         }
 
         async function printBadge() {
-            const qrImg = document.getElementById('qr-image');
-            if (qrImg.src.includes('base64')) {
-                alert("먼저 '미리보기' 버튼을 눌러 QR을 생성해 주세요.");
-                return;
-            }
-
             const badge = document.getElementById('badge-template');
-            
             try {
                 const canvas = await html2canvas(badge, {
                     scale: 3,
-                    useCORS: true,
-                    logging: false
+                    useCORS: true
                 });
                 
                 const imgData = canvas.toDataURL('image/png');
@@ -88,7 +76,7 @@
                 pdf.autoPrint();
                 window.open(pdf.output('bloburl'), '_blank');
             } catch (error) {
-                alert("인쇄창을 띄우지 못했습니다. 브라우저의 팝업 차단을 해제해 주세요.");
+                alert("인쇄창을 띄우지 못했습니다. 브라우저 설정에서 팝업을 허용해 주세요!");
             }
         }
     </script>
