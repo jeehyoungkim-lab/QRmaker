@@ -2,110 +2,113 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>이름표 시스템 자가 진단 버전</title>
+    <title>학술대회 이름표 인쇄 시스템</title>
     
-    <!-- 1. 라이브러리 로드 (경로 재확인용) -->
+    <!-- 리포지토리에 올린 라이브러리 로드 -->
     <script src="qrcode.min.js"></script>
 
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        .no-print { background: white; padding: 20px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input { padding: 12px; margin: 5px; width: 280px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; display: block; margin-left: auto; margin-right: auto; }
-        button { padding: 15px 30px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; background: #c2185b; margin-top: 10px; }
-        
-        /* 이름표 디자인 */
+        /* 화면 표시용 스타일 */
+        body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; text-align: center; padding: 20px; background: #f0f2f5; color: #333; }
+        .no-print { background: white; padding: 25px; display: inline-block; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .no-print h2 { margin-top: 0; font-size: 22px; color: #1a73e8; }
+        input { padding: 12px; margin: 6px; width: 300px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; display: block; margin-left: auto; margin-right: auto; }
+        button { padding: 15px 40px; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 18px; background: #1a73e8; margin-top: 15px; transition: 0.2s; }
+        button:hover { background: #1557b0; }
+
+        /* 이름표 디자인 (실제 인쇄 규격: 10cm x 15cm 권장) */
         #badge-area { 
-            width: 10cm; height: 14cm; background: white; margin: 0 auto; 
-            border: 1px solid #ddd; position: relative; 
-            display: flex; flex-direction: column; align-items: center; /* 중앙 정렬 */
+            width: 10cm; height: 15cm; background: white; margin: 0 auto; 
+            border: 1px solid #eee; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; overflow: hidden;
         }
         
-        .content { padding-top: 2cm; width: 100%; }
-        .content p { font-size: 20px; margin: 5px 0; color: #666; }
-        .content h1 { font-size: 50px; margin: 20px 0; color: #000; font-weight: bold; }
+        /* 상단 바 디자인 */
+        .header { width: 100%; height: 3cm; background: #1a73e8; color: white; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; box-sizing: border-box; }
+        .header h2 { font-size: 24px; font-weight: 800; line-height: 1.2; word-break: keep-all; }
 
-/* QR 코드 위치 고정 */
-#qrcode { margin-top: 30px; display: flex; justify-content: center; }
+        /* 중앙 정보 영역 */
+        .content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 1cm; }
+        .info-top { margin-bottom: 20px; }
+        .info-top p { font-size: 22px; margin: 4px 0; color: #666; font-weight: 500; }
+        
+        /* 이름 강조 */
+        .name-box { margin: 20px 0; }
+        .name-box h1 { font-size: 55px; margin: 0; color: #000; font-weight: 900; letter-spacing: -1px; }
 
-        /* [중요] 자가 진단용 스타일 (인쇄 시 숨김) */
-       
+        /* QR 코드 배치 */
+        #qrcode { margin-top: 30px; padding: 10px; border: 1px solid #f0f0f0; border-radius: 10px; }
 
-        @media print { .no-print, #debug-panel { display: none !important; } }
+        /* 하단 장식 또는 날짜 (선택 사항) */
+        .footer { height: 1cm; background: #f8f9fa; font-size: 14px; color: #999; display: flex; align-items: center; justify-content: center; }
+
+        /* 인쇄 설정 */
+        @media print {
+            .no-print { display: none; }
+            body { background: white; padding: 0; }
+            #badge-area { border: 1px solid #eee; margin: 0; box-shadow: none; page-break-after: always; }
+        }
     </style>
 </head>
 <body>
 
+    <!-- 입력 영역 (인쇄 시 숨김) -->
     <div class="no-print">
-        <h2>학술대회 이름표 생성 (진단 모드)</h2>
-        <!-- 기본값(value)을 미리 넣어두었습니다 -->
-        <input type="text" id="inName" value="홍길동" oninput="updateBadge()">
-        <input type="text" id="inUniv" value="한국대학교" oninput="updateBadge()">
-        <input type="text" id="inDept" value="컴퓨터공학과" oninput="updateBadge()">
-        <button onclick="window.print()">이름표 바로 인쇄하기</button>
+        <h2>학술대회 이름표 발행</h2>
+        <input type="text" id="inName" value="홍길동" placeholder="성함" oninput="updateBadge()">
+        <input type="text" id="inUniv" value="한국대학교" placeholder="대학교" oninput="updateBadge()">
+        <input type="text" id="inDept" value="컴퓨터공학과" placeholder="학과" oninput="updateBadge()">
+        <button onclick="window.print()">이름표 즉시 출력</button>
     </div>
 
+    <!-- 실제 이름표 영역 -->
     <div id="badge-area">
-        <div class="header">ACADEMIC CONFERENCE 2024</div>
+        <div class="header">
+            <h2>ACADEMIC CONFERENCE<br>2024</h2>
+        </div>
         <div class="content">
-            <p id="dispUniv"></p>
-            <p id="dispDept"></p>
-            <h1 id="dispName"></h1>
+            <div class="info-top">
+                <p id="dispUniv">소속 대학교</p>
+                <p id="dispDept">소속 학과</p>
+            </div>
+            <div class="name-box">
+                <h1 id="dispName">성함</h1>
+            </div>
             <div id="qrcode"></div>
+        </div>
+        <div class="footer">
+            COEX, Seoul, Korea | 2024.05.20
         </div>
     </div>
 
+    <script>
+        function updateBadge() {
+            const name = document.getElementById('inName').value || "성함";
+            const univ = document.getElementById('inUniv').value || "소속 대학교";
+            const dept = document.getElementById('inDept').value || "소속 학과";
 
-<script>
-    function updateBadge() {
-        // 1. 상태 표시를 위한 디버그 요소들
-        const debugLib = document.getElementById('lib-status');
-        const debugObj = document.getElementById('obj-status');
-        const debugErr = document.getElementById('error-status');
-
-        try {
-            // 2. 입력창에서 값 가져오기
-            const name = document.getElementById('inName').value;
-            const univ = document.getElementById('inUniv').value;
-            const dept = document.getElementById('inDept').value;
-
-            // 3. 화면 텍스트 업데이트
             document.getElementById('dispName').innerText = name;
             document.getElementById('dispUniv').innerText = univ;
             document.getElementById('dispDept').innerText = dept;
 
-            // 4. QR 영역 초기화
             const qrDiv = document.getElementById("qrcode");
             qrDiv.innerHTML = ""; 
 
-            // 5. [핵심] QR 코드 생성 로직 추가
-            // 여기서 'L' 레벨을 사용해야 한글 용량 부족(Overflow) 문제가 해결됩니다.
-            if (typeof QRCode !== "undefined") {
-                debugLib.innerText = "✅ 로드 성공";
-                
+            // QR 생성 로직 (용량 문제를 방지하기 위해 L 레벨 사용)
+            if (window.QRCode) {
                 new QRCode(qrDiv, {
-                    text: `NAME:${name}\nUNIV:${univ}`, // QR에 담을 정보
+                    text: `NAME:${name}, UNIV:${univ}`,
                     width: 160,
                     height: 160,
                     colorDark : "#000000",
                     colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L // L로 설정하면 더 많은 글자를 담을 수 있습니다!
+                    correctLevel : QRCode.CorrectLevel.L
                 });
-
-                debugObj.innerText = "✅ QR 생성 성공";
-                debugErr.innerText = "없음";
-            } else {
-                debugLib.innerText = "❌ 라이브러리 미로드";
             }
-
-        } catch (e) {
-            console.error(e);
-            debugErr.innerText = e.message; // 에러가 나면 여기에 표시됩니다.
         }
-    }
 
-    // 페이지 로드 시 즉시 실행하여 기본 상태를 보여줍니다.
-    window.onload = updateBadge;
-</script>
-
+        // 페이지 로드 시 즉시 반영
+        window.onload = updateBadge;
+    </script>
 </body>
 </html>
